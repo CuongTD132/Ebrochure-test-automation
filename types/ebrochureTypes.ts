@@ -1,4 +1,3 @@
-// Interface định nghĩa cấu trúc dữ liệu cơ bản của một "Chiến dịch khuyến mãi" (Campaign)
 export interface Campaign {
     code: string;       // Mã chiến dịch (Ví dụ: MAIL 2607)
     typeVn: string;     // Phân loại / Tên chiến dịch hiển thị bằng Tiếng Việt
@@ -8,6 +7,7 @@ export interface Campaign {
     // Danh sách các file ảnh/pdf tương ứng phân bổ theo từng khu vực
     // key là mã thư mục vùng (folder), value là tên file tương ứng (chưa kèm đuôi file)
     file: Record<string, string>; 
+    folder?: string;    // Tên thư mục chứa data riêng của chiến dịch (VD: mail, giasi,...)
 }
 
 // Interface định nghĩa cấu trúc dữ liệu cuối cùng (đã được nội suy/gộp)

@@ -8,23 +8,54 @@ const REGIONS = [
     { vn: "MIỀN TRUNG", en: "CLUSTER 3", dropdown: "Cluster 3", folder: "trung" },
     { vn: "SupercenterĐN", en: "SupercenterĐN", dropdown: "DNSC", folder: "dnsc" },
 ];
-
-// Danh sách các Chiến dịch (Campaigns).
-// LƯU Ý: Chỉ cần thêm phần tử vào mảng này là hệ thống sẽ tự động tổng hợp sinh test data
-export const currentCampaigns: Campaign[] = [
-    {
-        code: "MAIL 2607",                                  // Mã chiến dịch
-        typeVn: "DEAL TỐT ĐẾN TỪ THƯƠNG HIỆU RIÊNG",        // Loại (tên rút gọn) Tiếng Việt
-        typeEn: "BEST PRICE FROM PRIVATE LABLE",            // Loại (tên rút gọn) Tiếng Anh
-        start: "2026-03-26T00:00",                          // Bắt đầu
-        end: "2026-04-08T23:59",                            // Kết thúc
-        file: {                                             // Cấu hình mapping tên file theo "mã folder" ở trên
-            "bac": "CLUSTER 1+2_BAC",
-            "nam": "NAM",
-            "trung": "CLUSTER 3",
-            // "dnsc": "CLUSTER DNSC"
-        }
+// Định nghĩa các bộ file riêng biệt cho từng loại
+const FILE_MAPS = {
+    THR: {
+        bac: "THUONG-HIEU-RIENG_BAC",
+        nam: "THUONG-HIEU-RIENG_NAM",
+        trung: "THUONG-HIEU-RIENG_TRUNG",
+        // dnsc: "THUONG-HIEU-RIENG_DNSC"
     },
+    GIA_SI: {
+        bac: "GIA-SI_BAC",
+        nam: "GIA-SI_NAM",
+        trung: "GIA-SI_TRUNG",
+        // dnsc: "GIA-SI_DNSC"
+    },
+    MNLN: {
+        bac: "MUA-CANG-NHIEU-GIA-CANG-RE_BAC",
+        nam: "MUA-CANG-NHIEU-GIA-CANG-RE_NAM",
+        trung: "MUA-CANG-NHIEU-GIA-CANG-RE_TRUNG",
+        // dnsc: "MUA-CANG-NHIEU-GIA-CANG-RE_DNSC"
+    },
+    MAIL: {
+        bac: "CLUSTER 1+2_BAC",
+        nam: "NAM",
+        trung: "CLUSTER 3", // Cập nhật theo ý bạn
+        // dnsc: "CLUSTER DNSC"
+    },
+} as const;
+
+const COMMON = {
+    code: "MAIL 2607",
+    start: "2026-03-26T00:00",
+    end: "2026-04-08T23:59",
+};
+
+// Hàm "đẻ" Campaign
+const createCampaign = (vn: string, en: string, folderName: string, fileKey: keyof typeof FILE_MAPS): Campaign => ({
+    ...COMMON,
+    typeVn: vn,
+    typeEn: en,
+    file: FILE_MAPS[fileKey],
+    folder: folderName
+});
+
+export const currentCampaigns: Campaign[] = [
+    createCampaign("DEAL TỐT ĐẾN TỪ THƯƠNG HIỆU RIÊNG", "BEST PRICE FROM PRIVATE LABLE", "mail", "MAIL"),
+    createCampaign("GIÁ SỈ", "WHOLESALES", "giasi", "GIA_SI"),
+    createCampaign("MUA NHIỀU LỢI NHIỀU", "BUY MORE SAVE MORE", "mnln", "MNLN"),
+    createCampaign("THƯƠNG HIỆU RIÊNG", "PRIVATE LABLE", "thr", "THR"),
 ];
 
 // Hàm có nhiệm vụ duyệt và nhân bản dữ liệu, tạo ra mảng chứa mọi InputData cần thiết (Dùng để nạp thẳng vào bộ test).
@@ -51,7 +82,7 @@ export const generateTestData = ():InputData[] => {
                     endDate: cp.end,
                     regionDropdown: reg.dropdown,                           // Text sử dụng để chọn trong danh sách Dropdown
                     fileName: fileName,                                     // Tên ảnh upload
-                    regionFolder: reg.folder,                               // Tên nhóm thư mục upload
+                    regionFolder: cp.folder ? `${cp.folder}/${reg.folder}` : reg.folder, // Nối thư mục chiến dịch và vùng miền
                 };
             })
             // Lọc bỏ đi hết những item rỗng (bị return null do thiếu file ở trên)
