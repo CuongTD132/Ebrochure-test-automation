@@ -71,6 +71,31 @@ export class EbrochuresPage {
         await this.page.waitForURL('/admin/ebrochures/create');
     }
 
+    async getAllExistingTitles(): Promise<string[]> {
+        await this.goToBrochuresPage();
+
+        await this.page.locator('table tbody tr').first().waitFor();
+
+        const titles = await this.page.locator('td div.mb-1').allTextContents();
+
+        return titles.map(t => t.trim());
+    }
+
+    async isBrochureExist(title: string): Promise<boolean> {
+        await this.goToBrochuresPage();
+
+        // đợi table load xong
+        await this.page.locator('table tbody tr').first().waitFor();
+
+        const row = this.page.locator('tr', {
+            has: this.page.locator('td div.mb-1', {
+                hasText: new RegExp(`^${title}$`)
+            })
+        });
+
+        return await row.first().isVisible().catch(() => false);
+    }
+
     // Hàm dùng chung cho việc xử lý chọn/upload cả định dạng Image (.jpg/png) và PDF
     private async processUpload(fileName: string, regionFolder: string, extension: string, trigger: Locator) {
         // Tạo đường dẫn file (name + phần mở rộng)
@@ -90,9 +115,9 @@ export class EbrochuresPage {
         await this.page.locator('.card-body .ext').first().waitFor({ state: 'visible', timeout: 10000 });
 
         // Tìm xem file chuẩn bị chọn có sẵn trong thư viện trên server hay chưa
-        const fileInLibrary = this.page.locator('.card-body', {
-            has: this.page.locator('h6', { hasText: fileName }).filter({ hasText: extension })
-        }).first();
+        const fileInLibrary = this.page.locator(
+            `.card-file[title="${fullFileName}"]`
+        ).first();
 
         // --- Bước 2: Tải lên hoặc Chọn file có sẵn ---
         if (await fileInLibrary.isVisible()) {
@@ -111,6 +136,12 @@ export class EbrochuresPage {
             // Đợi hệ thống tự động tải file lên server xong (phụ thuộc tốc độ mạng), ấn xác nhận
             await this.addSelectedFilesBtn.click();
 
+            // Mở Modal (Cửa sổ thư viện popup) ---
+            await trigger.click();
+
+            // Đợi cho đến khi hệ thống load xong danh sách file cũ (ít nhất 1 file hiển thị) - tránh lỗi do trang trắng
+            await this.page.locator('.card-body .ext').first().waitFor({ state: 'visible', timeout: 5000 });
+
             // Đợi file mới nhảy vọt hiển thị trong thư viện tab chọn
             await fileInLibrary.waitFor({ state: 'visible' });
 
@@ -127,7 +158,7 @@ export class EbrochuresPage {
 
         // Kiểm tra xem hình ảnh/file vừa được chọn đã được render ngoài form gốc hay chưa
         const uploadedPreview = this.page.locator(`.file-preview-item[title="${fullFileName}"]`);
-        await expect(uploadedPreview).toBeVisible({ timeout: 5000 });
+        await expect(uploadedPreview).toBeVisible({ timeout: 10000 });
 
         console.log(`Đã xác nhận file ${fullFileName} hiển thị ngoài giao diện.`);
     }
