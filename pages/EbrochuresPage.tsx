@@ -33,6 +33,7 @@ export class EbrochuresPage {
     readonly createPointBtn: Locator;   // Nút "Tạo điểm"
     readonly autoCropBtn: Locator;      // Nút "Tự động cắt"
     readonly saveSlideBtn: Locator;     // Nút "Lưu trang"
+    readonly slideNumberInput: Locator; // Ô hiển thị số trang hiện tại
     private isUploaded = false;
     constructor(page: Page) {
         this.page = page;
@@ -60,6 +61,7 @@ export class EbrochuresPage {
         this.createPointBtn = page.locator('button').filter({ hasText: 'Tạo điểm' });
         this.autoCropBtn = page.locator('button').filter({ hasText: 'Tự động cắt' });
         this.saveSlideBtn = page.locator('button').filter({ hasText: 'Lưu trang' });
+        this.slideNumberInput = page.locator('input[name="slide_number"]');
     }
 
     // Hàm chuyển hướng đến trang danh sách Ấn phẩm
@@ -289,7 +291,7 @@ export class EbrochuresPage {
 
     }
 
-    async goToCreateSlide(folderName: string) {
+    async goToCreateSlide(folderName: string): Promise<boolean> {
         // Chờ danh sách ổn định
         await this.page.locator('table tbody tr').first().waitFor({ state: 'visible', timeout: 10000 });
 
@@ -310,7 +312,7 @@ export class EbrochuresPage {
 
         if (currentSlidesCount >= totalImages) {
             console.log(`Đã thêm đủ ${totalImages} trang.`);
-            return;
+            return false; // Không cần tạo thêm
         }
 
         // Nếu chưa đủ, bấm nút "Thêm mới trang ấn phẩm khuyến mãi"
@@ -318,12 +320,28 @@ export class EbrochuresPage {
 
         // Đợi chuyển URL thành công
         await this.page.waitForURL(/.*slides\/create/);
+
+        return true; // Cần tạo slide
     }
 
-    async createSlide(folderName: string, imageIndex: number) {
+    async createSlide(folderName: string) {
         const folderPath = path.resolve(`./tests-data/${folderName}`);
         const sortedImages = getSortedFiles(folderPath, '.jpg');
-        const fileName = sortedImages[imageIndex];
+
+        // Lấy số trang từ input để xác định hình ảnh cần chọn
+        const slideNumberStr = await this.slideNumberInput.inputValue();
+        const slideNumber = parseInt(slideNumberStr);
+        const totalImages = sortedImages.length;
+
+        // Kiểm tra nếu số trang hiện tại lớn hơn tổng số hình, nghĩa là đã hoàn thành
+        if (slideNumber > totalImages) {
+            console.log(`Đã hoàn thành: Số trang ${slideNumber} > Tổng số hình ${totalImages}`);
+            return;
+        }
+
+        const actualImageIndex = slideNumber - 1;
+
+        const fileName = sortedImages[actualImageIndex];
         const nameWithoutExt = path.parse(fileName).name;
         const fullFileName = `${nameWithoutExt}.jpg`;
 

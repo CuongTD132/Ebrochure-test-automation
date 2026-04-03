@@ -55,8 +55,11 @@ test.describe.only('Bước 2: Xử lý chi tiết (Đa luồng)', () => {
                 .filter(f => f.endsWith('.jpg')).length;
 
             for (let i = 0; i < totalImages; i++) {
-                await ebrochuresPage.goToCreateSlide(data.regionFolder);
-                await ebrochuresPage.createSlide(data.regionFolder, i);
+                const shouldCreate = await ebrochuresPage.goToCreateSlide(data.regionFolder);
+                if (!shouldCreate) {
+                    break;
+                }
+                await ebrochuresPage.createSlide(data.regionFolder);
             }
         });
     });
