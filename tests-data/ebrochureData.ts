@@ -37,7 +37,6 @@ const hasImageOrPdfFiles = (folderPath: string): boolean => {
         const files = fs.readdirSync(folderPath);
         return files.some(file => /\.(jpg|jpeg|png|pdf)$/i.test(file));
     } catch (error) {
-        console.log(`[Data Gen] Lỗi khi đọc thư mục: ${folderPath} - ${error}`);
         return false;
     }
 };
@@ -52,7 +51,6 @@ const getPdfFileName = (folderPath: string): string | null => {
         }
         return null;
     } catch (error) {
-        console.log(`[Data Gen] Lỗi khi đọc thư mục: ${folderPath} - ${error}`);
         return null;
     }
 };

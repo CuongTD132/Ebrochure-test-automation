@@ -20,6 +20,8 @@ export class EbrochuresPage {
 
     // ---- CÁC PHẦN TỬ LIÊN QUAN ĐẾN UPLOAD FILE (ẢNH & PDF) ----
     readonly imgUploadTrigger: Locator;     // Nút kích hoạt mở popup chọn ảnh
+    readonly imgUploadTriggerFE: Locator;   // Nút kích hoạt chọn ảnh cho Image FE
+    readonly imgUploadTriggerAI: Locator;   // Nút kích hoạt chọn ảnh cho Image AI
     readonly pdfUploadTrigger: Locator;     // Nút kích hoạt mở popup chọn file PDF
     readonly modalUploadTab: Locator;       // Tab "Tải lên" trong thư viện Media
     readonly addSelectedFilesBtn: Locator;  // Nút "Thêm file đã chọn" / Xác nhận chọn
@@ -28,14 +30,19 @@ export class EbrochuresPage {
     readonly viewButton: Locator; // Nút "Xem trang" để chuyển sang trang chi tiết sau khi tạo xong
     readonly emptyListMessage: Locator; // Locator cho dòng "Không tìm thấy"
     readonly addSlideBtn: Locator;      // Locator cho nút "Thêm mới trang"
+    readonly createPointBtn: Locator;   // Nút "Tạo điểm"
+    readonly autoCropBtn: Locator;      // Nút "Tự động cắt"
+    readonly saveSlideBtn: Locator;     // Nút "Lưu trang"
     constructor(page: Page) {
         this.page = page;
         // Ánh xạ (Map) các elements trên giao diện với code
         this.phpDebugbar = page.locator('.phpdebugbar-close-btn');
         this.promotionBtn = page.getByRole('link', { name: 'Ấn phẩm khuyến mãi', exact: true });
         this.createBtn = page.getByRole('link', { name: 'Thêm mới ấn phẩm khuyến mãi' });
-        this.imgUploadTrigger = page.locator('.input-group[data-type="image"]').getByText('Chọn file');
-        this.pdfUploadTrigger = page.locator('.input-group[data-type="document"]').getByText('Chọn file');
+        this.imgUploadTrigger = page.locator('.input-group[data-type="image"]').first().locator('.input-group-text').first();
+        this.imgUploadTriggerFE = page.locator('div[data-toggle="aizuploader"][data-type="image"]').filter({ has: page.locator('#imageFeId') }).locator('.input-group-text');
+        this.imgUploadTriggerAI = page.locator('div[data-toggle="aizuploader"][data-type="image"]').filter({ has: page.locator('#imageId') }).locator('.input-group-text');
+        this.pdfUploadTrigger = page.locator('.input-group[data-type="document"]').getByText('Chọn file').first();
         this.modalUploadTab = page.getByRole('link', { name: 'Tải lên' });
         this.addSelectedFilesBtn = page.locator('[data-toggle="aizUploaderAddSelected"]');
         this.uploadedPreview = page.locator('.file-preview-item');
@@ -47,8 +54,11 @@ export class EbrochuresPage {
         this.endDate = page.locator('#end_date');
         this.viewButton = page.getByTitle('Xem trang');
         this.emptyListMessage = page.locator('tr.footable-empty');
-        this.addSlideBtn = page.getByRole('link', { name: 'Thêm mới trang' });
+        this.addSlideBtn = page.getByRole('link', { name: 'Thêm mới trang ấn phẩm khuyến mãi' });
         this.modalCloseBtn = page.locator('button.close[data-dismiss="modal"]');
+        this.createPointBtn = page.locator('button').filter({ hasText: 'Tạo điểm' });
+        this.autoCropBtn = page.locator('button').filter({ hasText: 'Tự động cắt' });
+        this.saveSlideBtn = page.locator('button').filter({ hasText: 'Lưu trang' });
     }
 
     // Hàm chuyển hướng đến trang danh sách Ấn phẩm
@@ -82,6 +92,25 @@ export class EbrochuresPage {
         return titles.map(t => t.trim());
     }
 
+    private async openUploadModal(trigger: Locator) {
+        // Click mở modal
+        await trigger.click();
+
+        // Đợi nút confirm xuất hiện (modal render xong)
+        await expect(this.addSelectedFilesBtn).toBeVisible();
+
+        // Chờ animation UI (nếu hệ thống bị delay)
+        await this.page.waitForTimeout(1500);
+
+        // Đợi list load xong (có file hoặc empty)
+        const fileItem = this.page.locator('.card-file').first();
+        const emptyMessage = this.page.locator('text=No files found');
+
+        await Promise.race([
+            fileItem.waitFor({ state: 'visible', timeout: 10000 }),
+            emptyMessage.waitFor({ state: 'visible', timeout: 10000 })
+        ]);
+    }
 
     // Hàm dùng chung cho việc xử lý chọn/upload cả định dạng Image (.jpg/png) và PDF
     private async processUpload(fileName: string, regionFolder: string, extension: string, trigger: Locator) {
@@ -92,20 +121,7 @@ export class EbrochuresPage {
         const filePath = path.resolve(`./tests-data/${regionFolder}/` + fullFileName);
 
         // --- Bước 1: Mở Modal (Cửa sổ thư viện popup) ---
-        await trigger.click();
-
-        // Đảm bảo nút "Thêm file" trên modal đã xuất hiện
-        await expect(this.addSelectedFilesBtn).toBeVisible()
-        await this.page.waitForTimeout(1500); // Chờ 1.5 giây cho hiệu ứng animation của UI ổn định
-
-        // Đợi UI load xong (có file hoặc empty state)
-        const fileItem = this.page.locator('.card-file').first();
-        const emptyMessage = this.page.locator('text=No files found');
-
-        await Promise.race([
-            fileItem.waitFor({ state: 'visible', timeout: 10000 }),
-            emptyMessage.waitFor({ state: 'visible', timeout: 10000 })
-        ]);
+        await this.openUploadModal(trigger);
 
         // Tìm xem file chuẩn bị chọn có sẵn trong thư viện trên server hay chưa
         const fileInLibrary = this.page.locator(
@@ -227,27 +243,123 @@ export class EbrochuresPage {
         }, formattedDate);
     }
 
-    async uploadMultipleImages(folderName: string) {
+    // Hàm batch upload tất cả file chưa được upload vào server
+    private async batchUploadNewImages(folderName: string, trigger: Locator) {
         const folderPath = path.resolve(`./tests-data/${folderName}`);
+        const sortedImages = getSortedFiles(folderPath, '.jpg');
 
-        // Lấy danh sách file jpg đã sắp xếp: CLUSTER 3.jpg, 2_Cluster 3.jpg, ...
-        const sortedImages = getSortedFiles( folderPath, '.jpg');
+        await this.openUploadModal(trigger);
 
-        console.log("Thứ tự upload:", sortedImages);
+        // Xác định những file nào cần upload (chưa tồn tại trong thư viện)
+        const filesToUpload: string[] = [];
 
         for (const fileName of sortedImages) {
-            // Tách tên và đuôi để dùng cho hàm processUpload đã viết trước đó
-            const nameWithoutExt = path.parse(fileName).name;
-            const extWithoutDot = path.parse(fileName).ext.replace('.', '');
+            const fullFileName = `${path.parse(fileName).name}.jpg`;
+            const fileInLibrary = this.page.locator(`.card-file[title="${fullFileName}"]`).first();
 
-            console.log(`Đang upload: ${fileName}`);
-
-            // Gọi lại hàm processUpload (đã refactor ở các bước trước)
-            await this.processUpload(nameWithoutExt, folderName, extWithoutDot, this.imgUploadTrigger);
-
-            // Nếu UI yêu cầu sau mỗi lần chọn phải bấm "Thêm" hoặc chờ đợi
-            // Hãy đảm bảo modal đã đóng hoặc sẵn sàng cho file tiếp theo
+            if (!(await fileInLibrary.isVisible().catch(() => false))) {
+                filesToUpload.push(fileName);
+            }
         }
+
+        if (filesToUpload.length === 0) {
+            console.log("Tất cả file đã tồn tại. Không cần upload mới.");
+            await this.modalCloseBtn.click();
+            return;
+        }
+
+        console.log(`Chuẩn bị upload ${filesToUpload.length} file mới:`, filesToUpload);
+
+        // Chuyển sang tab "Tải lên"
+        await this.modalUploadTab.click();
+
+        // Upload TẤT CẢ file chưa upload cùng lúc
+        const filePaths = filesToUpload.map(fileName =>
+            path.resolve(`./tests-data/${folderName}/${fileName}`)
+        );
+
+        await this.page.locator('input.uppy-Dashboard-input').setInputFiles(filePaths);
+
+        // Chờ hệ thống upload xong rồi bấm xác nhận
+        await this.page.waitForTimeout(3000); // Chờ upload complete
+        await this.addSelectedFilesBtn.click();
+
+        // Đóng modal sau khi upload
+        await this.modalCloseBtn.waitFor({ state: 'visible' });
+        await this.modalCloseBtn.click();
+        await expect(this.modalUploadTab).not.toBeVisible();
+
+        console.log(`Đã upload ${filesToUpload.length} file lên server.`);
+    }
+
+    // Hàm chọn từng hình theo thứ tự từ thư viện đã có
+    private async selectImagesSequentially(folderName: string, trigger: Locator) {
+        const folderPath = path.resolve(`./tests-data/${folderName}`);
+        const sortedImages = getSortedFiles(folderPath, '.jpg');
+
+        for (const fileName of sortedImages) {
+            const nameWithoutExt = path.parse(fileName).name;
+            const fullFileName = `${nameWithoutExt}.jpg`;
+
+            console.log(`Đang chọn: ${fullFileName}`);
+
+            // Mở modal
+            await trigger.click();
+            await expect(this.addSelectedFilesBtn).toBeVisible();
+            await this.page.waitForTimeout(1500);
+
+            // Đợi list load
+            const fileItem = this.page.locator('.card-file').first();
+            await fileItem.waitFor({ state: 'visible', timeout: 10000 });
+
+            // Tìm và click vào file
+            const fileInLibrary = this.page.locator(`.card-file[title="${fullFileName}"]`).first();
+            await expect(fileInLibrary).toBeVisible();
+            await fileInLibrary.click();
+
+            // Xác nhận chọn
+            await this.addSelectedFilesBtn.click();
+
+            // Đóng modal
+            await expect(this.modalUploadTab).not.toBeVisible();
+
+            // Kiểm tra xem hình đã render ngoài form
+            const uploadedPreview = this.page.locator(`.file-preview-item[title="${fullFileName}"]`);
+            await expect(uploadedPreview).toBeVisible({ timeout: 10000 });
+
+            console.log(`Đã chọn và xác nhận ${fullFileName}.`);
+        }
+    }
+
+    // Hàm chọn một hình cụ thể từ thư viện
+    private async selectSingleImage(fullFileName: string, trigger: Locator) {
+        console.log(`Đang chọn: ${fullFileName}`);
+
+        // Mở modal
+        await trigger.click();
+        await expect(this.addSelectedFilesBtn).toBeVisible();
+        await this.page.waitForTimeout(1500);
+
+        // Đợi list load
+        const fileItem = this.page.locator('.card-file').first();
+        await fileItem.waitFor({ state: 'visible', timeout: 10000 });
+
+        // Tìm và click vào file
+        const fileInLibrary = this.page.locator(`.card-file[title="${fullFileName}"]`).first();
+        await expect(fileInLibrary).toBeVisible();
+        await fileInLibrary.click();
+
+        // Xác nhận chọn
+        await this.addSelectedFilesBtn.click();
+
+        // Đóng modal
+        await expect(this.modalUploadTab).not.toBeVisible();
+
+        // Kiểm tra xem hình đã render ngoài form
+        const uploadedPreview = this.page.locator(`.file-preview-item[title="${fullFileName}"]`);
+        await expect(uploadedPreview).toBeVisible({ timeout: 10000 });
+
+        console.log(`Đã chọn và xác nhận ${fullFileName}.`);
     }
 
     async goToSlideDetails(brochureTitle: string) {
@@ -260,49 +372,65 @@ export class EbrochuresPage {
         // 2. Click vào nút "Xem trang" CHỈ NẰM TRONG hàng này
         // Chúng ta sử dụng row.getByTitle thay vì this.page.getByTitle
         await row.getByTitle('Xem trang').click();
+        await expect(this.page).toHaveURL(/.*slides/);
+
     }
 
-    async smartAddSlides(folderName: string) {
-        const folderPath = path.resolve(`./tests-data/${folderName}`);
+    async goToCreateSlide(folderName: string) {
+        // Chờ danh sách ổn định
+        await this.page.locator('table tbody tr').first().waitFor({ state: 'visible', timeout: 10000 });
 
-        // 1. Chờ cho danh sách ổn định (hoặc hiện chữ "Không tìm thấy", hoặc hiện list hình)
-        // Chúng ta chờ nút "Thêm mới" xuất hiện là chắc chắn nhất
-        await this.addSlideBtn.waitFor({ state: 'visible' });
-
-        // 2. Kiểm tra xem tin nhắn "Không tìm thấy" có đang HIỂN THỊ không
+        // Kiểm tra xem có tin nhắn "Không tìm thấy" không
         const isEmpty = await this.emptyListMessage.isVisible();
 
-        if (isEmpty) {
-            console.log("Danh sách trống. Tiến hành upload TẤT CẢ hình trong folder.");
-            // Dùng hàm uploadMultipleImages đã viết trước đó để add theo thứ tự (không số -> 2 -> 3...)
-            // Lưu ý: Hàm này bên trong phải có logic click nút "Thêm mới" cho mỗi file.
-            await this.uploadMultipleImages(folderName);
-        } else {
-            console.log("Danh sách đã có hình. Tiến hành upload hình KẾ TIẾP.");
-
-            // 1. Đếm số hình đang có trên UI (ví dụ dựa vào số dòng <tr> trong body bảng)
-            // Bạn cần điều chỉnh selector này cho đúng với UI thực tế
-            const currentSlidesCount = await this.page.locator('table.footable tbody tr:not(.footable-empty)').count();
-
-            // 2. Lấy danh sách file đã sắp xếp từ folder
-            const sortedFiles = getSortedFiles(folderPath, '.jpg');
-
-            // 3. Tính toán file kế tiếp cần upload
-            // Nếu UI có 1 hình (thường là file không số), thì index kế tiếp là 1 (tương ứng file 2_)
-            // Nếu UI có 2 hình (không số và 2_), index kế tiếp là 2 (tương ứng file 3_)
-            const nextFileIndex = currentSlidesCount;
-
-            if (nextFileIndex < sortedFiles.length) {
-                const fileToUpload = sortedFiles[nextFileIndex];
-                console.log(`UI đang có ${currentSlidesCount} hình. Upload file kế tiếp: ${fileToUpload}`);
-
-                // Thực hiện các bước upload file này
-                await this.addSlideBtn.click(); // Click nút Thêm mới
-                // ... gọi hàm điền form và upload file 'fileToUpload' ...
-            } else {
-                console.log("Tất cả hình trong folder đã được upload lên UI.");
-            }
+        let currentSlidesCount = 0;
+        if (!isEmpty) {
+            // Đếm số trang hiện tại dựa trên số dòng trong bảng
+            currentSlidesCount = await this.page.locator('table.footable tbody tr:not(.footable-empty)').count();
         }
+
+        // Lấy số hình trong folder
+        const folderPath = path.resolve(`./tests-data/${folderName}`);
+        const totalImages = getSortedFiles(folderPath, '.jpg').length;
+
+        console.log(`Số trang hiện tại: ${currentSlidesCount}, Tổng số hình trong folder: ${totalImages}`);
+
+        if (currentSlidesCount >= totalImages) {
+            console.log(`Đã thêm đủ ${totalImages} trang.`);
+            return;
+        }
+
+        // Nếu chưa đủ, bấm nút "Thêm mới trang ấn phẩm khuyến mãi"
+        await this.addSlideBtn.click();
+
+        // Đợi chuyển URL thành công
+        await this.page.waitForURL(/.*slides\/create/);
+    }
+
+    async createSlide(folderName: string, imageIndex: number) {
+        const folderPath = path.resolve(`./tests-data/${folderName}`);
+        const sortedImages = getSortedFiles(folderPath, '.jpg');
+        const fileName = sortedImages[imageIndex];
+        const nameWithoutExt = path.parse(fileName).name;
+        const fullFileName = `${nameWithoutExt}.jpg`;
+
+        console.log(`Đang chọn hình ${fullFileName} cho Image FE`);
+        await this.selectSingleImage(fullFileName, this.imgUploadTriggerFE);
+
+        console.log(`Đang chọn hình ${fullFileName} cho Image AI`);
+        await this.selectSingleImage(fullFileName, this.imgUploadTriggerAI);
+
+        // Sau khi chọn xong, bấm nút Tạo điểm
+        await this.createPointBtn.click();
+
+        // Tiếp theo bấm nút Tự động cắt
+        await this.autoCropBtn.click();
+
+        // Chờ response từ API auto-crop
+        await this.waitForAutoCropResponse();
+
+        // Cuối cùng bấm nút Lưu trang
+        await this.saveSlideBtn.click();
     }
 
     private async openModalAndFindFileWithRetry(trigger: Locator, fileInLibrary: Locator, maxRetry: number = 5) {
@@ -343,6 +471,14 @@ export class EbrochuresPage {
                     return false;
                 }
             }
+        }
+    }
+
+    // Hàm chờ response từ API auto-crop
+    private async waitForAutoCropResponse() {
+        const response = await this.page.waitForResponse(resp => resp.url().includes('/auto-crop'));
+        if (response.status() >= 400) {
+            console.error(`Auto-crop API error: ${response.status()} ${response.statusText()}`);
         }
     }
 }

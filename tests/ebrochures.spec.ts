@@ -2,7 +2,8 @@ import {expect, test} from '@playwright/test';
 import {EbrochuresPage} from "../pages/EbrochuresPage";
 import {InputData} from "../types/ebrochureTypes";
 import {generateTestData} from "../tests-data/ebrochureData";
-
+import * as fs from 'fs';
+import * as path from 'path';
 let testData: InputData[] = generateTestData();
 let ebrochuresPage: EbrochuresPage;
 test.describe('Quy trình quản lý ấn phẩm', () => {
@@ -45,10 +46,17 @@ test.describe('Bước 2: Xử lý chi tiết (Đa luồng)', () => {
 
     testData.forEach((data) => {
         test(`Kiểm tra chi tiết slide: ${data.titleVn}`, async ({page}) => {
-            const ebrochuresPageParallel = new EbrochuresPage(page);
+            const ebrochuresPage = new EbrochuresPage(page);
             await page.goto('/admin/ebrochures');
-            await ebrochuresPageParallel.goToSlideDetails(data.titleVn);
-            await expect(page).not.toHaveURL(/.*create/);
+            await ebrochuresPage.goToSlideDetails(data.titleVn);
+            const folderPath = path.resolve(`./tests-data/${data.regionFolder}`);
+            const totalImages = fs.readdirSync(folderPath)
+                .filter(f => f.endsWith('.jpg')).length;
+
+            for (let i = 0; i < totalImages; i++) {
+                await ebrochuresPage.goToCreateSlide(data.regionFolder);
+                await ebrochuresPage.createSlide(data.regionFolder, i);
+            }
         });
     });
 });
