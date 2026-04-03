@@ -74,7 +74,7 @@ export const generateTestData = (): InputData[] => {
                 // Lấy tên file PDF làm tên file upload
                 const fileName = getPdfFileName(folderPath);
                 if (!fileName) {
-                    console.log(`[Data Gen] Bỏ qua khu vực: ${reg.vn} (Thư mục ${folderPath} không chứa file PDF)`);
+                    console.log(`Không tìm thấy hình ${fileName}`);
                     return null;
                 }
 

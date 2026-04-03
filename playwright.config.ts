@@ -1,5 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 import {getAuthFile} from "./utils/env";
+import {isSessionExpired} from "./utils/session";
 import * as fs from 'fs';
 
 const authFile = getAuthFile();
@@ -32,7 +33,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     baseURL: process.env.BASE_URL,
-    storageState: fs.existsSync(authFile) ? authFile : undefined,
+    storageState: (fs.existsSync(authFile) && !isSessionExpired()) ? authFile : undefined,
     headless: false,
     // launchOptions: {
     //   slowMo: 1000, // Nghỉ 1 giây sau mỗi hành động

@@ -231,7 +231,7 @@ export class EbrochuresPage {
         const folderPath = path.resolve(`./tests-data/${folderName}`);
 
         // Lấy danh sách file jpg đã sắp xếp: CLUSTER 3.jpg, 2_Cluster 3.jpg, ...
-        const sortedImages = getSortedFiles(folderPath, '.jpg');
+        const sortedImages = getSortedFiles( folderPath, '.jpg');
 
         console.log("Thứ tự upload:", sortedImages);
 

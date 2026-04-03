@@ -13,6 +13,9 @@ setup('login and save session', async ({ page }) => {
 
     console.log(`Session hết hạn (${authFile}) → login`);
 
+    // Clear old storage state to avoid conflicts
+    await page.context().clearCookies();
+
     const loginPage = new LoginPage(page);
     await loginPage.logIn();
 

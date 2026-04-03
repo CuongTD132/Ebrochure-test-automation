@@ -40,6 +40,9 @@ export class LoginPage {
         await this.loginButton.click();
         
         // Chờ hệ thống xác thực thành công và tự động chuyển về đường dẫn "/admin" thì mới thôi
-        await this.page.waitForURL('/admin');
+        await this.page.waitForURL('/admin', { timeout: 10000 }).catch(async () => {
+            const currentURL = this.page.url();
+            throw new Error(`Login failed: Expected /admin, but got ${currentURL}`);
+        });
     }
 }
