@@ -98,8 +98,14 @@ export class EbrochuresPage {
         await expect(this.addSelectedFilesBtn).toBeVisible()
         await this.page.waitForTimeout(1500); // Chờ 1.5 giây cho hiệu ứng animation của UI ổn định
 
-        // Đợi cho đến khi hệ thống load xong danh sách file cũ (ít nhất 1 file hiển thị) - tránh lỗi do trang trắng
-        await this.page.locator('.card-body .ext').first().waitFor({ state: 'visible', timeout: 10000 });
+        // Đợi UI load xong (có file hoặc empty state)
+        const fileItem = this.page.locator('.card-file').first();
+        const emptyMessage = this.page.locator('text=No files found');
+
+        await Promise.race([
+            fileItem.waitFor({ state: 'visible', timeout: 10000 }),
+            emptyMessage.waitFor({ state: 'visible', timeout: 10000 })
+        ]);
 
         // Tìm xem file chuẩn bị chọn có sẵn trong thư viện trên server hay chưa
         const fileInLibrary = this.page.locator(
@@ -174,10 +180,13 @@ export class EbrochuresPage {
         await this.selectBootstrapOption('region_id', data.regionDropdown);
 
         // Mở popup upload 2 loại file Ảnh và PDF
-
-        // await this.uploadMultipleImages(data.regionFolder);
-        await this.uploadImage(data.fileName, data.regionFolder);
+        // BƯỚC 1: Upload PDF trước - tên PDF sẽ được dùng làm tên hình
+        console.log(`Đang upload file PDF với tên: ${data.fileName}`);
         await this.uploadPdf(data.fileName, data.regionFolder);
+        
+        // BƯỚC 2: Dùng chính tên file PDF làm tên hình (vì cùng tên, khác đuôi)
+        console.log(`Sẽ upload hình với tên (lấy từ PDF): ${data.fileName}`);
+        await this.uploadImage(data.fileName, data.regionFolder);
     }
 
     // Hàm xử lý việc chọn phần tử trong Dropdown tích hợp thư viện Bootstrap-Select
@@ -296,11 +305,7 @@ export class EbrochuresPage {
         }
     }
 
-    private async openModalAndFindFileWithRetry(
-        trigger: Locator,
-        fileInLibrary: Locator,
-        maxRetry: number = 5
-    ) {
+    private async openModalAndFindFileWithRetry(trigger: Locator, fileInLibrary: Locator, maxRetry: number = 5) {
         for (let attempt = 1; attempt <= maxRetry; attempt++) {
             console.log(`Thử mở modal lần ${attempt}`);
 

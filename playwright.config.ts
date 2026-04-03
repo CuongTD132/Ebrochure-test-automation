@@ -54,9 +54,6 @@ export default defineConfig({
     },
     {
       name: 'chromium',
-      use: {
-        storageState: 'auth.json',
-      },
       dependencies: ['setup'],
     },
     // {
