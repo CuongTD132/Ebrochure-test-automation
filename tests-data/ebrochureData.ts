@@ -1,5 +1,7 @@
 import { Campaign, InputData } from "../types/ebrochureTypes";
 import {CAMPAIGN_DEFINITIONS, CONFIG} from "./testDataConfig";
+import * as fs from 'fs';
+import * as path from 'path';
 
 
 // Danh sách cố định chứa thông tin chi tiết các Khu vực hỗ trợ (Regions)
@@ -10,14 +12,12 @@ const REGIONS = [
     { vn: "MIỀN TRUNG", en: "CLUSTER 3", dropdown: "Cluster 3", folder: "trung" },
     { vn: "SupercenterĐN", en: "SupercenterĐN", dropdown: "DNSC", folder: "dnsc" },
 ];
-type FileKey = keyof typeof CONFIG.fileMaps;
 const BASE_CAMPAIGN = CONFIG.campaign;
 // Hàm "đẻ" Campaign
-const createCampaign = (vn: string, en: string, folderName: string, fileKey: FileKey): Campaign => ({
+const createCampaign = (vn: string, en: string, folderName: string): Campaign => ({
     ...BASE_CAMPAIGN,
     typeVn: vn,
     typeEn: en,
-    file: CONFIG.fileMaps[fileKey],
     folder: folderName
 });
 
@@ -27,10 +27,35 @@ const currentCampaigns: Campaign[] = CAMPAIGN_DEFINITIONS
         createCampaign(
             c.vn,
             c.en,
-            c.folder,
-            c.key as FileKey
+            c.folder
         )
     );
+
+// Helper function to check if a folder contains image or PDF files
+const hasImageOrPdfFiles = (folderPath: string): boolean => {
+    try {
+        const files = fs.readdirSync(folderPath);
+        return files.some(file => /\.(jpg|jpeg|png|pdf)$/i.test(file));
+    } catch (error) {
+        console.log(`[Data Gen] Lỗi khi đọc thư mục: ${folderPath} - ${error}`);
+        return false;
+    }
+};
+
+// Helper function to get the PDF file name without extension
+const getPdfFileName = (folderPath: string): string | null => {
+    try {
+        const files = fs.readdirSync(folderPath);
+        const pdfFile = files.find(file => /\.pdf$/i.test(file));
+        if (pdfFile) {
+            return path.parse(pdfFile).name; // Tên không có đuôi
+        }
+        return null;
+    } catch (error) {
+        console.log(`[Data Gen] Lỗi khi đọc thư mục: ${folderPath} - ${error}`);
+        return null;
+    }
+};
 
 // Hàm có nhiệm vụ duyệt và nhân bản dữ liệu, tạo ra mảng chứa mọi InputData cần thiết (Dùng để nạp thẳng vào bộ test).
 export const generateTestData = (): InputData[] => {
@@ -39,12 +64,17 @@ export const generateTestData = (): InputData[] => {
         // ...duyệt qua toàn bộ danh sách quy hoạch các khu vực (Regions)
         return REGIONS
             .map(reg => {
-                // Lấy ra tên file ứng với khu vực đang tham chiếu
-                const fileName = cp.file[reg.folder];
+                // Kiểm tra thư mục có chứa file hình hoặc pdf không
+                const folderPath = path.join(__dirname, cp.folder, reg.folder);
+                if (!hasImageOrPdfFiles(folderPath)) {
+                    console.log(`[Data Gen] Bỏ qua khu vực: ${reg.vn} (Thư mục ${cp.folder}/${reg.folder} không chứa file hình/pdf)`);
+                    return null;
+                }
 
-                // Nếu không có tên file trong cấu hình thì bỏ qua tạo dữ liệu cho vùng này (return null)
+                // Lấy tên file PDF làm tên file upload
+                const fileName = getPdfFileName(folderPath);
                 if (!fileName) {
-                    console.log(`[Data Gen] Bỏ qua khu vực: ${reg.vn} (Thiếu file cấu hình)`);
+                    console.log(`[Data Gen] Bỏ qua khu vực: ${reg.vn} (Thư mục ${folderPath} không chứa file PDF)`);
                     return null;
                 }
 
@@ -55,7 +85,7 @@ export const generateTestData = (): InputData[] => {
                     startDate: cp.start,
                     endDate: cp.end,
                     regionDropdown: reg.dropdown,                           // Text sử dụng để chọn trong danh sách Dropdown
-                    fileName: fileName,                                     // Tên ảnh upload
+                    fileName: fileName,                                     // Tên file PDF làm tên upload
                     regionFolder: cp.folder ? `${cp.folder}/${reg.folder}` : reg.folder, // Nối thư mục chiến dịch và vùng miền
                 };
             })

@@ -4,9 +4,6 @@ export interface Campaign {
     typeEn: string;     // Phân loại / Tên chiến dịch hiển thị bằng Tiếng Anh
     start: string;      // Ngày bắt đầu (định dạng YYYY-MM-DDTHH:mm)
     end: string;        // Ngày kết thúc (định dạng YYYY-MM-DDTHH:mm)
-    // Danh sách các file ảnh/pdf tương ứng phân bổ theo từng khu vực
-    // key là mã thư mục vùng (folder), value là tên file tương ứng (chưa kèm đuôi file)
-    file: Record<string, string>;
     folder?: string;    // Tên thư mục chứa data riêng của chiến dịch (VD: mail, giasi,...)
 }
 
