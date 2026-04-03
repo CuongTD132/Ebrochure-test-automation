@@ -1,5 +1,5 @@
 import { Campaign, InputData } from "../types/ebrochureTypes";
-import {CONFIG} from "./testDataConfig";
+import {CAMPAIGN_DEFINITIONS, CONFIG} from "./testDataConfig";
 
 
 // Danh sách cố định chứa thông tin chi tiết các Khu vực hỗ trợ (Regions)
@@ -21,13 +21,16 @@ const createCampaign = (vn: string, en: string, folderName: string, fileKey: Fil
     folder: folderName
 });
 
-export const currentCampaigns: Campaign[] = [
-    createCampaign("TUNG DEAL SIÊU TIẾT KIỆM", "MEGA SAVINGS DEALS", "mail", "MAIL"),
-    createCampaign("GIÁ SỈ", "WHOLESALES", "giasi", "GIA_SI"),
-    createCampaign("MUA NHIỀU LỢI NHIỀU", "BUY MORE SAVE MORE", "mnln", "MNLN"),
-    createCampaign("THƯƠNG HIỆU RIÊNG", "PRIVATE LABLE", "thr", "THR"),
-    // createCampaign("DEAL TỐT CHỐT LÀ LỜI",  "GOOD DEALS EQUAL BIG GAINS", "mnln", "MNLN"),
-];
+const currentCampaigns: Campaign[] = CAMPAIGN_DEFINITIONS
+    .filter(c => c.enabled)
+    .map(c =>
+        createCampaign(
+            c.vn,
+            c.en,
+            c.folder,
+            c.key as FileKey
+        )
+    );
 
 // Hàm có nhiệm vụ duyệt và nhân bản dữ liệu, tạo ra mảng chứa mọi InputData cần thiết (Dùng để nạp thẳng vào bộ test).
 export const generateTestData = (): InputData[] => {

@@ -16,7 +16,7 @@ pnpm-debug.log*
 .env
 .env.*
 !.env.example
-
+auth-*.json
 # IDEs and Editors
 .idea/
 .vscode/

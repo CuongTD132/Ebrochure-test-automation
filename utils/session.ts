@@ -1,9 +1,12 @@
 import * as fs from 'fs';
+import { getAuthFile } from './env';
 
 export function isSessionExpired(): boolean {
-    if (!fs.existsSync('auth.json')) return true;
+    const authFile = getAuthFile();
 
-    const state = JSON.parse(fs.readFileSync('auth.json', 'utf-8'));
+    if (!fs.existsSync(authFile)) return true;
+
+    const state = JSON.parse(fs.readFileSync(authFile, 'utf-8'));
 
     const authCookie = state.cookies.find((c: any) =>
         c.name.includes('session')
@@ -16,4 +19,3 @@ export function isSessionExpired(): boolean {
 
     return Date.now() > (expires - buffer);
 }
-
