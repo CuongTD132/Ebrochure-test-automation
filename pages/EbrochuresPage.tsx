@@ -24,7 +24,7 @@ export class EbrochuresPage {
     readonly modalUploadTab: Locator;       // Tab "Tải lên" trong thư viện Media
     readonly addSelectedFilesBtn: Locator;  // Nút "Thêm file đã chọn" / Xác nhận chọn
     readonly uploadedPreview: Locator;      // Vùng hiển thị file đã được chọn
-
+    readonly modalCloseBtn: Locator;
     readonly viewButton: Locator; // Nút "Xem trang" để chuyển sang trang chi tiết sau khi tạo xong
     readonly emptyListMessage: Locator; // Locator cho dòng "Không tìm thấy"
     readonly addSlideBtn: Locator;      // Locator cho nút "Thêm mới trang"
@@ -48,6 +48,7 @@ export class EbrochuresPage {
         this.viewButton = page.getByTitle('Xem trang');
         this.emptyListMessage = page.locator('tr.footable-empty');
         this.addSlideBtn = page.getByRole('link', { name: 'Thêm mới trang' });
+        this.modalCloseBtn = page.locator('button.close[data-dismiss="modal"]');
     }
 
     // Hàm chuyển hướng đến trang danh sách Ấn phẩm
@@ -81,20 +82,6 @@ export class EbrochuresPage {
         return titles.map(t => t.trim());
     }
 
-    async isBrochureExist(title: string): Promise<boolean> {
-        await this.goToBrochuresPage();
-
-        // đợi table load xong
-        await this.page.locator('table tbody tr').first().waitFor();
-
-        const row = this.page.locator('tr', {
-            has: this.page.locator('td div.mb-1', {
-                hasText: new RegExp(`^${title}$`)
-            })
-        });
-
-        return await row.first().isVisible().catch(() => false);
-    }
 
     // Hàm dùng chung cho việc xử lý chọn/upload cả định dạng Image (.jpg/png) và PDF
     private async processUpload(fileName: string, regionFolder: string, extension: string, trigger: Locator) {
@@ -136,16 +123,12 @@ export class EbrochuresPage {
             // Đợi hệ thống tự động tải file lên server xong (phụ thuộc tốc độ mạng), ấn xác nhận
             await this.addSelectedFilesBtn.click();
 
-            // Mở Modal (Cửa sổ thư viện popup) ---
-            await trigger.click();
+            const found = await this.openModalAndFindFileWithRetry(trigger, fileInLibrary);
 
-            // Đợi cho đến khi hệ thống load xong danh sách file cũ (ít nhất 1 file hiển thị) - tránh lỗi do trang trắng
-            await this.page.locator('.card-body .ext').first().waitFor({ state: 'visible', timeout: 5000 });
+            if (!found) {
+                throw new Error(`Không tìm thấy file ${fullFileName} sau nhiều lần retry`);
+            }
 
-            // Đợi file mới nhảy vọt hiển thị trong thư viện tab chọn
-            await fileInLibrary.waitFor({ state: 'visible' });
-
-            // Click đúp/chọn lại file đó
             await fileInLibrary.click();
         }
 
@@ -309,6 +292,51 @@ export class EbrochuresPage {
                 // ... gọi hàm điền form và upload file 'fileToUpload' ...
             } else {
                 console.log("Tất cả hình trong folder đã được upload lên UI.");
+            }
+        }
+    }
+
+    private async openModalAndFindFileWithRetry(
+        trigger: Locator,
+        fileInLibrary: Locator,
+        maxRetry: number = 5
+    ) {
+        for (let attempt = 1; attempt <= maxRetry; attempt++) {
+            console.log(`Thử mở modal lần ${attempt}`);
+
+            // Mở modal
+            await trigger.click();
+
+            try {
+                // Chờ list load
+                await this.page.locator('.card-body .ext').first().waitFor({
+                    state: 'visible',
+                    timeout: 5000
+                });
+
+                // Chờ file xuất hiện
+                await fileInLibrary.waitFor({
+                    state: 'visible',
+                    timeout: 3000
+                });
+
+                console.log(`Tìm thấy file ở lần ${attempt}`);
+                return true; // SUCCESS
+            } catch (err) {
+                console.log(`Không thấy file ở lần ${attempt}`);
+
+                // Nếu chưa phải lần cuối → đóng modal để retry
+                if (attempt < maxRetry) {
+                    await this.modalCloseBtn.click();
+
+                    // đảm bảo modal đóng hẳn
+                    await this.modalCloseBtn.waitFor({ state: 'hidden' });
+
+                    await this.page.waitForTimeout(500); // tránh click quá nhanh
+                } else {
+                    console.log(`Đã retry ${maxRetry} lần nhưng không thấy file`);
+                    return false;
+                }
             }
         }
     }

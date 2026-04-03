@@ -24,7 +24,7 @@ export class LoginPage {
         const username = process.env.USERNAME;
         const password = process.env.PASSWORD;
         
-        // Điều hướng trình duyệt đến domain đã được cầu hình nối với "/login"
+        // Điều hướng trình duyệt đến domain đã được cầu hình nối với "/log    n"
         await this.page.goto('/login');
         
         // Cảnh báo + ngưng test nếu quên config biến môi trường

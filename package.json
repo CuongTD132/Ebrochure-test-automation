@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "es6": "npx playwright test "
+    "es6": "npx playwright test ",
+    "clean-images": "npx ts-node tests-data/cleanupImages.ts"
   },
   "keywords": [],
   "author": "",

@@ -12,7 +12,7 @@ require('dotenv').config();
  * See https://playwright.dev/docs/test-configuration.
  */
 export default defineConfig({
-  timeout: 300000,
+  timeout: 600000,
   testDir: './tests',
   /* Run tests in files in parallel */
   fullyParallel: true,
@@ -55,6 +55,10 @@ export default defineConfig({
       },
       dependencies: ['setup'],
     },
+    // {
+    //   name: 'chromium',
+    //   use: { ...devices['Desktop Chrome'] },
+    // },
 
     // {
     //   name: 'firefox',

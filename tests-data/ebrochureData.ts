@@ -1,4 +1,6 @@
-import {Campaign, InputData} from "../types/ebrochureTypes";
+import { Campaign, InputData } from "../types/ebrochureTypes";
+import {CONFIG} from "./testDataConfig";
+
 
 // Danh sách cố định chứa thông tin chi tiết các Khu vực hỗ trợ (Regions)
 // Bao gồm tên, chuỗi giá trị dropdown, và tên thư mục nơi lưu trữ file đi kèm của vùng đó
@@ -8,58 +10,27 @@ const REGIONS = [
     { vn: "MIỀN TRUNG", en: "CLUSTER 3", dropdown: "Cluster 3", folder: "trung" },
     { vn: "SupercenterĐN", en: "SupercenterĐN", dropdown: "DNSC", folder: "dnsc" },
 ];
-// Định nghĩa các bộ file riêng biệt cho từng loại
-const FILE_MAPS = {
-    THR: {
-        bac: "THUONG-HIEU-RIENG_BAC",
-        nam: "THUONG-HIEU-RIENG_NAM",
-        trung: "THUONG-HIEU-RIENG_TRUNG",
-        // dnsc: "THUONG-HIEU-RIENG_DNSC"
-    },
-    GIA_SI: {
-        bac: "GIA-SI_BAC",
-        nam: "GIA-SI_NAM",
-        trung: "GIA-SI_TRUNG",
-        // dnsc: "GIA-SI_DNSC"
-    },
-    MNLN: {
-        bac: "MUA-CANG-NHIEU-GIA-CANG-RE_BAC",
-        nam: "MUA-CANG-NHIEU-GIA-CANG-RE_NAM",
-        trung: "MUA-CANG-NHIEU-GIA-CANG-RE_TRUNG",
-        // dnsc: "MUA-CANG-NHIEU-GIA-CANG-RE_DNSC"
-    },
-    MAIL: {
-        bac: "CLUSTER 1+2_BAC",
-        nam: "NAM",
-        trung: "CLUSTER 3", // Cập nhật theo ý bạn
-        // dnsc: "CLUSTER DNSC"
-    },
-} as const;
-
-const COMMON = {
-    code: "MAIL 2607",
-    start: "2026-03-26T00:00",
-    end: "2026-04-08T23:59",
-};
-
+type FileKey = keyof typeof CONFIG.fileMaps;
+const BASE_CAMPAIGN = CONFIG.campaign;
 // Hàm "đẻ" Campaign
-const createCampaign = (vn: string, en: string, folderName: string, fileKey: keyof typeof FILE_MAPS): Campaign => ({
-    ...COMMON,
+const createCampaign = (vn: string, en: string, folderName: string, fileKey: FileKey): Campaign => ({
+    ...BASE_CAMPAIGN,
     typeVn: vn,
     typeEn: en,
-    file: FILE_MAPS[fileKey],
+    file: CONFIG.fileMaps[fileKey],
     folder: folderName
 });
 
 export const currentCampaigns: Campaign[] = [
-    createCampaign("DEAL TỐT ĐẾN TỪ THƯƠNG HIỆU RIÊNG", "BEST PRICE FROM PRIVATE LABLE", "mail", "MAIL"),
+    createCampaign("TUNG DEAL SIÊU TIẾT KIỆM", "MEGA SAVINGS DEALS", "mail", "MAIL"),
     createCampaign("GIÁ SỈ", "WHOLESALES", "giasi", "GIA_SI"),
     createCampaign("MUA NHIỀU LỢI NHIỀU", "BUY MORE SAVE MORE", "mnln", "MNLN"),
     createCampaign("THƯƠNG HIỆU RIÊNG", "PRIVATE LABLE", "thr", "THR"),
+    // createCampaign("DEAL TỐT CHỐT LÀ LỜI",  "GOOD DEALS EQUAL BIG GAINS", "mnln", "MNLN"),
 ];
 
 // Hàm có nhiệm vụ duyệt và nhân bản dữ liệu, tạo ra mảng chứa mọi InputData cần thiết (Dùng để nạp thẳng vào bộ test).
-export const generateTestData = ():InputData[] => {
+export const generateTestData = (): InputData[] => {
     // Với mỗi campaign...
     return currentCampaigns.flatMap(cp => {
         // ...duyệt qua toàn bộ danh sách quy hoạch các khu vực (Regions)
