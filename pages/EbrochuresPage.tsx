@@ -243,94 +243,6 @@ export class EbrochuresPage {
         }, formattedDate);
     }
 
-    // Hàm batch upload tất cả file chưa được upload vào server
-    private async batchUploadNewImages(folderName: string, trigger: Locator) {
-        const folderPath = path.resolve(`./tests-data/${folderName}`);
-        const sortedImages = getSortedFiles(folderPath, '.jpg');
-
-        await this.openUploadModal(trigger);
-
-        // Xác định những file nào cần upload (chưa tồn tại trong thư viện)
-        const filesToUpload: string[] = [];
-
-        for (const fileName of sortedImages) {
-            const fullFileName = `${path.parse(fileName).name}.jpg`;
-            const fileInLibrary = this.page.locator(`.card-file[title="${fullFileName}"]`).first();
-
-            if (!(await fileInLibrary.isVisible().catch(() => false))) {
-                filesToUpload.push(fileName);
-            }
-        }
-
-        if (filesToUpload.length === 0) {
-            console.log("Tất cả file đã tồn tại. Không cần upload mới.");
-            await this.modalCloseBtn.click();
-            return;
-        }
-
-        console.log(`Chuẩn bị upload ${filesToUpload.length} file mới:`, filesToUpload);
-
-        // Chuyển sang tab "Tải lên"
-        await this.modalUploadTab.click();
-
-        // Upload TẤT CẢ file chưa upload cùng lúc
-        const filePaths = filesToUpload.map(fileName =>
-            path.resolve(`./tests-data/${folderName}/${fileName}`)
-        );
-
-        await this.page.locator('input.uppy-Dashboard-input').setInputFiles(filePaths);
-
-        // Chờ hệ thống upload xong rồi bấm xác nhận
-        await this.page.waitForTimeout(3000); // Chờ upload complete
-        await this.addSelectedFilesBtn.click();
-
-        // Đóng modal sau khi upload
-        await this.modalCloseBtn.waitFor({ state: 'visible' });
-        await this.modalCloseBtn.click();
-        await expect(this.modalUploadTab).not.toBeVisible();
-
-        console.log(`Đã upload ${filesToUpload.length} file lên server.`);
-    }
-
-    // Hàm chọn từng hình theo thứ tự từ thư viện đã có
-    private async selectImagesSequentially(folderName: string, trigger: Locator) {
-        const folderPath = path.resolve(`./tests-data/${folderName}`);
-        const sortedImages = getSortedFiles(folderPath, '.jpg');
-
-        for (const fileName of sortedImages) {
-            const nameWithoutExt = path.parse(fileName).name;
-            const fullFileName = `${nameWithoutExt}.jpg`;
-
-            console.log(`Đang chọn: ${fullFileName}`);
-
-            // Mở modal
-            await trigger.click();
-            await expect(this.addSelectedFilesBtn).toBeVisible();
-            await this.page.waitForTimeout(1500);
-
-            // Đợi list load
-            const fileItem = this.page.locator('.card-file').first();
-            await fileItem.waitFor({ state: 'visible', timeout: 10000 });
-
-            // Tìm và click vào file
-            const fileInLibrary = this.page.locator(`.card-file[title="${fullFileName}"]`).first();
-            await expect(fileInLibrary).toBeVisible();
-            await fileInLibrary.click();
-
-            // Xác nhận chọn
-            await this.addSelectedFilesBtn.click();
-
-            // Đóng modal
-            await expect(this.modalUploadTab).not.toBeVisible();
-
-            // Kiểm tra xem hình đã render ngoài form
-            const uploadedPreview = this.page.locator(`.file-preview-item[title="${fullFileName}"]`);
-            await expect(uploadedPreview).toBeVisible({ timeout: 10000 });
-
-            console.log(`Đã chọn và xác nhận ${fullFileName}.`);
-        }
-    }
-
     // Hàm chọn một hình cụ thể từ thư viện
     private async selectSingleImage(fullFileName: string, trigger: Locator) {
         console.log(`Đang chọn: ${fullFileName}`);
@@ -487,13 +399,20 @@ function getSortedFiles(folderPath: string, extension: string): string[] {
         .filter(file => file.endsWith(extension));
 
     return files.sort((a, b) => {
-        // Trích xuất số ở đầu tên file (ví dụ "2_Cluster" -> 2)
-        const matchA = a.match(/^(\d+)_/);
-        const matchB = b.match(/^(\d+)_/);
+        const matchA = a.match(/^(\d+)/);
+        const matchB = b.match(/^(\d+)/);
 
-        const numA = matchA ? parseInt(matchA[1]) : 0; // Nếu không có số, coi như là 0
-        const numB = matchB ? parseInt(matchB[1]) : 0;
+        const numA = matchA ? parseInt(matchA[1]) : null;
+        const numB = matchB ? parseInt(matchB[1]) : null;
 
+        // 1. Không có số → đứng trước
+        if (numA === null && numB === null) {
+            return a.localeCompare(b);
+        }
+        if (numA === null) return -1;
+        if (numB === null) return 1;
+
+        // 2. Có số → sort theo số
         return numA - numB;
     });
 }

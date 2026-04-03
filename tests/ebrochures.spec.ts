@@ -47,7 +47,7 @@ test.describe('Bước 2: Xử lý chi tiết (Đa luồng)', () => {
     testData.forEach((data) => {
         test(`Kiểm tra chi tiết slide: ${data.titleVn}`, async ({page}) => {
             const ebrochuresPage = new EbrochuresPage(page);
-            await page.goto('/admin/ebrochures');
+            await ebrochuresPage.goToBrochuresPage();
             await ebrochuresPage.goToSlideDetails(data.titleVn);
             const folderPath = path.resolve(`./tests-data/${data.regionFolder}`);
             const totalImages = fs.readdirSync(folderPath)
