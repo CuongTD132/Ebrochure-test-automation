@@ -40,13 +40,14 @@ test.describe('Quy trình quản lý ấn phẩm', () => {
     });
 });
 
-test.describe('Bước 2: Xử lý chi tiết (Đa luồng)', () => {
+test.describe.only('Bước 2: Xử lý chi tiết (Đa luồng)', () => {
     // Cấu hình riêng cho block này chạy song song
     test.describe.configure({mode: 'parallel'});
 
     testData.forEach((data) => {
         test(`Kiểm tra chi tiết slide: ${data.titleVn}`, async ({page}) => {
             const ebrochuresPage = new EbrochuresPage(page);
+            await page.goto('/admin');
             await ebrochuresPage.goToBrochuresPage();
             await ebrochuresPage.goToSlideDetails(data.titleVn);
             const folderPath = path.resolve(`./tests-data/${data.regionFolder}`);

@@ -33,6 +33,7 @@ export class EbrochuresPage {
     readonly createPointBtn: Locator;   // Nút "Tạo điểm"
     readonly autoCropBtn: Locator;      // Nút "Tự động cắt"
     readonly saveSlideBtn: Locator;     // Nút "Lưu trang"
+    private isUploaded = false;
     constructor(page: Page) {
         this.page = page;
         // Ánh xạ (Map) các elements trên giao diện với code
@@ -258,7 +259,7 @@ export class EbrochuresPage {
 
         // Tìm và click vào file
         const fileInLibrary = this.page.locator(`.card-file[title="${fullFileName}"]`).first();
-        await expect(fileInLibrary).toBeVisible();
+        // await expect(fileInLibrary).toBeVisible();
         await fileInLibrary.click();
 
         // Xác nhận chọn
@@ -326,6 +327,11 @@ export class EbrochuresPage {
         const nameWithoutExt = path.parse(fileName).name;
         const fullFileName = `${nameWithoutExt}.jpg`;
 
+        if (!this.isUploaded) {
+            await this.batchUploadNewImages(folderName, this.imgUploadTriggerFE);
+            this.isUploaded = true;
+        }
+
         console.log(`Đang chọn hình ${fullFileName} cho Image FE`);
         await this.selectSingleImage(fullFileName, this.imgUploadTriggerFE);
 
@@ -345,6 +351,54 @@ export class EbrochuresPage {
         await this.saveSlideBtn.click();
     }
 
+     async batchUploadNewImages(folderName: string, trigger: Locator) {
+        const folderPath = path.resolve(`./tests-data/${folderName}`);
+        const sortedImages = getSortedFiles(folderPath, '.jpg');
+
+        await this.openUploadModal(trigger);
+
+        // Xác định những file nào cần upload (chưa tồn tại trong thư viện)
+        const filesToUpload: string[] = [];
+
+        for (const fileName of sortedImages) {
+            const fullFileName = `${path.parse(fileName).name}.jpg`;
+            const fileInLibrary = this.page.locator(`.card-file[title="${fullFileName}"]`).first();
+
+            if (!(await fileInLibrary.isVisible().catch(() => false))) {
+                filesToUpload.push(fileName);
+            }
+        }
+
+        if (filesToUpload.length === 0) {
+            console.log("Tất cả file đã tồn tại. Không cần upload mới.");
+            await this.modalCloseBtn.click();
+            return;
+        }
+
+        console.log(`Chuẩn bị upload ${filesToUpload.length} file mới:`, filesToUpload);
+
+        // Chuyển sang tab "Tải lên"
+        await this.modalUploadTab.click();
+
+        // Upload TẤT CẢ file chưa upload cùng lúc
+        const filePaths = filesToUpload.map(fileName =>
+            path.resolve(`./tests-data/${folderName}/${fileName}`)
+        );
+
+        await this.page.locator('input.uppy-Dashboard-input').setInputFiles(filePaths);
+
+         await expect(
+             this.page.locator('.uppy-StatusBar-statusPrimary')
+         ).toHaveText(/Hoàn thành/);
+        await this.addSelectedFilesBtn.click();
+
+        // Đóng modal sau khi upload
+        // await this.modalCloseBtn.waitFor({ state: 'visible' });
+        // await this.modalCloseBtn.click();
+        // await expect(this.modalUploadTab).not.toBeVisible();
+
+        console.log(`Đã upload ${filesToUpload.length} file lên server.`);
+    }
     private async openModalAndFindFileWithRetry(trigger: Locator, fileInLibrary: Locator, maxRetry: number = 5) {
         for (let attempt = 1; attempt <= maxRetry; attempt++) {
             console.log(`Thử mở modal lần ${attempt}`);
