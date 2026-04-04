@@ -40,7 +40,7 @@ test.describe('Quy trình quản lý ấn phẩm', () => {
     });
 });
 
-test.describe.only('Bước 2: Xử lý chi tiết (Đa luồng)', () => {
+test.describe('Bước 2: Xử lý chi tiết (Đa luồng)', () => {
     // Cấu hình riêng cho block này chạy song song
     test.describe.configure({mode: 'parallel'});
 

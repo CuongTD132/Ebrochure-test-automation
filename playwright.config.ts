@@ -34,7 +34,7 @@ export default defineConfig({
   use: {
     baseURL: process.env.BASE_URL,
     storageState: (fs.existsSync(authFile) && !isSessionExpired()) ? authFile : undefined,
-    headless: false,
+    // headless: false,
     // launchOptions: {
     //   slowMo: 1000, // Nghỉ 1 giây sau mỗi hành động
     // },

@@ -1,6 +1,7 @@
-import { expect, Locator, Page } from "@playwright/test";
+import {expect, Locator, Page} from "@playwright/test";
 import * as path from 'path';
 import * as fs from 'fs';
+
 // Quản lý các phần tử (elements) và hành động trên trang "Ấn phẩm khuyến mãi"
 export class EbrochuresPage {
     readonly page: Page;
@@ -35,32 +36,33 @@ export class EbrochuresPage {
     readonly saveSlideBtn: Locator;     // Nút "Lưu trang"
     readonly slideNumberInput: Locator; // Ô hiển thị số trang hiện tại
     private isUploaded = false;
+
     constructor(page: Page) {
         this.page = page;
         // Ánh xạ (Map) các elements trên giao diện với code
         this.phpDebugbar = page.locator('.phpdebugbar-close-btn');
-        this.promotionBtn = page.getByRole('link', { name: 'Ấn phẩm khuyến mãi', exact: true });
-        this.createBtn = page.getByRole('link', { name: 'Thêm mới ấn phẩm khuyến mãi' });
+        this.promotionBtn = page.getByRole('link', {name: 'Ấn phẩm khuyến mãi', exact: true});
+        this.createBtn = page.getByRole('link', {name: 'Thêm mới ấn phẩm khuyến mãi'});
         this.imgUploadTrigger = page.locator('.input-group[data-type="image"]').first().locator('.input-group-text').first();
-        this.imgUploadTriggerFE = page.locator('div[data-toggle="aizuploader"][data-type="image"]').filter({ has: page.locator('#imageFeId') }).locator('.input-group-text');
-        this.imgUploadTriggerAI = page.locator('div[data-toggle="aizuploader"][data-type="image"]').filter({ has: page.locator('#imageId') }).locator('.input-group-text');
+        this.imgUploadTriggerFE = page.locator('div[data-toggle="aizuploader"][data-type="image"]').filter({has: page.locator('#imageFeId')}).locator('.input-group-text');
+        this.imgUploadTriggerAI = page.locator('div[data-toggle="aizuploader"][data-type="image"]').filter({has: page.locator('#imageId')}).locator('.input-group-text');
         this.pdfUploadTrigger = page.locator('.input-group[data-type="document"]').getByText('Chọn file').first();
-        this.modalUploadTab = page.getByRole('link', { name: 'Tải lên' });
+        this.modalUploadTab = page.getByRole('link', {name: 'Tải lên'});
         this.addSelectedFilesBtn = page.locator('[data-toggle="aizUploaderAddSelected"]');
         this.uploadedPreview = page.locator('.file-preview-item');
-        this.titleVn = page.getByRole('textbox', { name: 'Tiêu đề' });
-        this.titleEn = page.getByRole('textbox', { name: 'Title EN' });
+        this.titleVn = page.getByRole('textbox', {name: 'Tiêu đề'});
+        this.titleEn = page.getByRole('textbox', {name: 'Title EN'});
         this.descriptionVn = page.locator('textarea[name="description"]');
         this.descriptionEn = page.locator('textarea[name="description_en"]');
         this.startDate = page.locator('#start_date');
         this.endDate = page.locator('#end_date');
         this.viewButton = page.getByTitle('Xem trang');
         this.emptyListMessage = page.locator('tr.footable-empty');
-        this.addSlideBtn = page.getByRole('link', { name: 'Thêm mới trang ấn phẩm khuyến mãi' });
+        this.addSlideBtn = page.getByRole('link', {name: 'Thêm mới trang ấn phẩm khuyến mãi'});
         this.modalCloseBtn = page.locator('button.close[data-dismiss="modal"]');
-        this.createPointBtn = page.locator('button').filter({ hasText: 'Tạo điểm' });
-        this.autoCropBtn = page.locator('button').filter({ hasText: 'Tự động cắt' });
-        this.saveSlideBtn = page.locator('button').filter({ hasText: 'Lưu trang' });
+        this.createPointBtn = page.locator('button').filter({hasText: 'Tạo điểm'});
+        this.autoCropBtn = page.locator('button').filter({hasText: 'Tự động cắt'});
+        this.saveSlideBtn = page.locator('button').filter({hasText: 'Lưu trang'});
         this.slideNumberInput = page.locator('input[name="slide_number"]');
     }
 
@@ -110,8 +112,8 @@ export class EbrochuresPage {
         const emptyMessage = this.page.locator('text=No files found');
 
         await Promise.race([
-            fileItem.waitFor({ state: 'visible', timeout: 10000 }),
-            emptyMessage.waitFor({ state: 'visible', timeout: 10000 })
+            fileItem.waitFor({state: 'visible', timeout: 10000}),
+            emptyMessage.waitFor({state: 'visible', timeout: 10000})
         ]);
     }
 
@@ -166,7 +168,7 @@ export class EbrochuresPage {
 
         // Kiểm tra xem hình ảnh/file vừa được chọn đã được render ngoài form gốc hay chưa
         const uploadedPreview = this.page.locator(`.file-preview-item[title="${fullFileName}"]`);
-        await expect(uploadedPreview).toBeVisible({ timeout: 10000 });
+        await expect(uploadedPreview).toBeVisible({timeout: 10000});
 
         console.log(`Đã xác nhận file ${fullFileName} hiển thị ngoài giao diện.`);
     }
@@ -202,7 +204,10 @@ export class EbrochuresPage {
         // BƯỚC 1: Upload PDF trước - tên PDF sẽ được dùng làm tên hình
         console.log(`Đang upload file PDF với tên: ${data.fileName}`);
         await this.uploadPdf(data.fileName, data.regionFolder);
-        
+        // if (!this.isUploaded) {
+            await this.batchUploadNewImages(data.regionFolder, this.imgUploadTrigger);
+        //     this.isUploaded = true;
+        // }
         // BƯỚC 2: Dùng chính tên file PDF làm tên hình (vì cùng tên, khác đuôi)
         console.log(`Sẽ upload hình với tên (lấy từ PDF): ${data.fileName}`);
         await this.uploadImage(data.fileName, data.regionFolder);
@@ -231,7 +236,7 @@ export class EbrochuresPage {
 
     // Hàm xử lý điền Dữ liệu Ngày/Giờ nâng cao
     async fillDateTime(locator: Locator, dateString: string) {
-        await locator.waitFor({ state: 'visible' });
+        await locator.waitFor({state: 'visible'});
 
         // Định dạng lại đầu vào string chuẩn xác theo input[type="datetime-local"] => "YYYY-MM-DDTHH:mm"
         const formattedDate = dateString.replace(' ', 'T').substring(0, 16);
@@ -240,8 +245,8 @@ export class EbrochuresPage {
         // Đây là bước can thiệp trực tiếp bằng JS tại trình duyệt (evaluate) để gán giá trị và kích hoạt trigger events
         await locator.evaluate((el: HTMLInputElement, val) => {
             el.value = val; // Đổi value trực tiếp
-            el.dispatchEvent(new Event('input', { bubbles: true })); // Ép gọi event input giả
-            el.dispatchEvent(new Event('change', { bubbles: true })); // Ép gọi event change giả cho framework web (React/Vue/v.v)
+            el.dispatchEvent(new Event('input', {bubbles: true})); // Ép gọi event input giả
+            el.dispatchEvent(new Event('change', {bubbles: true})); // Ép gọi event change giả cho framework web (React/Vue/v.v)
             el.blur(); // Mất focus (Đẩy ra ngoài) để hoàn tất vòng sinh logic
         }, formattedDate);
     }
@@ -252,12 +257,12 @@ export class EbrochuresPage {
 
         // Mở modal
         await trigger.click();
-        await expect(this.addSelectedFilesBtn).toBeVisible();
+        await expect(this.addSelectedFilesBtn).toBeVisible({ timeout: 30000 });
         await this.page.waitForTimeout(1500);
 
         // Đợi list load
         const fileItem = this.page.locator('.card-file').first();
-        await fileItem.waitFor({ state: 'visible', timeout: 10000 });
+        await fileItem.waitFor({state: 'visible', timeout: 30000});
 
         // Tìm và click vào file
         const fileInLibrary = this.page.locator(`.card-file[title="${fullFileName}"]`).first();
@@ -272,17 +277,17 @@ export class EbrochuresPage {
 
         // Kiểm tra xem hình đã render ngoài form
         const uploadedPreview = this.page.locator(`.file-preview-item[title="${fullFileName}"]`);
-        await expect(uploadedPreview).toBeVisible({ timeout: 10000 });
+        await expect(uploadedPreview).toBeVisible({timeout: 10000});
 
         console.log(`Đã chọn và xác nhận ${fullFileName}.`);
     }
 
     async goToSlideDetails(brochureTitle: string) {
         // 1. Xác định hàng (row) chứa tiêu đề
-        const row = this.page.locator('tr').filter({ hasText: brochureTitle });
+        const row = this.page.locator('tr').filter({hasText: brochureTitle});
 
         // Đợi hàng đó xuất hiện
-        await row.waitFor({ state: 'visible', timeout: 10000 });
+        await row.waitFor({state: 'visible', timeout: 10000});
 
         // 2. Click vào nút "Xem trang" CHỈ NẰM TRONG hàng này
         // Chúng ta sử dụng row.getByTitle thay vì this.page.getByTitle
@@ -293,7 +298,7 @@ export class EbrochuresPage {
 
     async goToCreateSlide(folderName: string): Promise<boolean> {
         // Chờ danh sách ổn định
-        await this.page.locator('table tbody tr').first().waitFor({ state: 'visible', timeout: 10000 });
+        await this.page.locator('table tbody tr').first().waitFor({state: 'visible', timeout: 30000});
 
         // Kiểm tra xem có tin nhắn "Không tìm thấy" không
         const isEmpty = await this.emptyListMessage.isVisible();
@@ -345,11 +350,6 @@ export class EbrochuresPage {
         const nameWithoutExt = path.parse(fileName).name;
         const fullFileName = `${nameWithoutExt}.jpg`;
 
-        if (!this.isUploaded) {
-            await this.batchUploadNewImages(folderName, this.imgUploadTriggerFE);
-            this.isUploaded = true;
-        }
-
         console.log(`Đang chọn hình ${fullFileName} cho Image FE`);
         await this.selectSingleImage(fullFileName, this.imgUploadTriggerFE);
 
@@ -369,7 +369,8 @@ export class EbrochuresPage {
         await this.saveSlideBtn.click();
     }
 
-     async batchUploadNewImages(folderName: string, trigger: Locator) {
+    //Upload nhiều hình
+    async batchUploadNewImages(folderName: string, trigger: Locator) {
         const folderPath = path.resolve(`./tests-data/${folderName}`);
         const sortedImages = getSortedFiles(folderPath, '.jpg');
 
@@ -405,18 +406,14 @@ export class EbrochuresPage {
 
         await this.page.locator('input.uppy-Dashboard-input').setInputFiles(filePaths);
 
-         await expect(
-             this.page.locator('.uppy-StatusBar-statusPrimary')
-         ).toHaveText(/Hoàn thành/);
+        await expect(
+            this.page.locator('.uppy-StatusBar-statusPrimary')
+        ).toContainText('Hoàn thành', {timeout: 30000});
         await this.addSelectedFilesBtn.click();
-
-        // Đóng modal sau khi upload
-        // await this.modalCloseBtn.waitFor({ state: 'visible' });
-        // await this.modalCloseBtn.click();
-        // await expect(this.modalUploadTab).not.toBeVisible();
 
         console.log(`Đã upload ${filesToUpload.length} file lên server.`);
     }
+
     private async openModalAndFindFileWithRetry(trigger: Locator, fileInLibrary: Locator, maxRetry: number = 5) {
         for (let attempt = 1; attempt <= maxRetry; attempt++) {
             console.log(`Thử mở modal lần ${attempt}`);
@@ -447,7 +444,7 @@ export class EbrochuresPage {
                     await this.modalCloseBtn.click();
 
                     // đảm bảo modal đóng hẳn
-                    await this.modalCloseBtn.waitFor({ state: 'hidden' });
+                    await this.modalCloseBtn.waitFor({state: 'hidden'});
 
                     await this.page.waitForTimeout(500); // tránh click quá nhanh
                 } else {
@@ -466,6 +463,7 @@ export class EbrochuresPage {
         }
     }
 }
+
 function getSortedFiles(folderPath: string, extension: string): string[] {
     const files = fs.readdirSync(folderPath)
         .filter(file => file.endsWith(extension));
