@@ -16,6 +16,8 @@ test.describe('Quy trình quản lý ấn phẩm', () => {
     test('Bước 1: Tạo hàng loạt ấn phẩm theo tuần tự', async ({page}) => {
         const existingTitles = await ebrochuresPage.getAllExistingTitles();
         const titleSet = new Set(existingTitles);
+        let createdCount = 0;
+        const total = testData.length;
 
         for (const data of testData) {
             console.log(`Đang xử lý: ${data.titleVn}`);
@@ -36,6 +38,7 @@ test.describe('Quy trình quản lý ấn phẩm', () => {
             await page.locator('table tbody tr').first().waitFor();
 
             titleSet.add(data.titleVn);
+            console.log(`Đã tạo được: ${createdCount}/${total}`);
         }
     });
 });
@@ -56,10 +59,10 @@ test.describe('Bước 2: Xử lý chi tiết (Đa luồng)', () => {
 
             for (let i = 0; i < totalImages; i++) {
                 const shouldCreate = await ebrochuresPage.goToCreateSlide(data.regionFolder);
-                if (!shouldCreate) {
-                    break;
-                }
-                await ebrochuresPage.createSlide(data.regionFolder);
+                if (!shouldCreate) break;
+
+                const created = await ebrochuresPage.createSlide(data.regionFolder);
+                if (!created) break;
             }
         });
     });

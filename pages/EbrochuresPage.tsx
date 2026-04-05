@@ -204,10 +204,10 @@ export class EbrochuresPage {
         // BƯỚC 1: Upload PDF trước - tên PDF sẽ được dùng làm tên hình
         console.log(`Đang upload file PDF với tên: ${data.fileName}`);
         await this.uploadPdf(data.fileName, data.regionFolder);
-        // if (!this.isUploaded) {
-            await this.batchUploadNewImages(data.regionFolder, this.imgUploadTrigger);
-        //     this.isUploaded = true;
-        // }
+
+        //upload ds hình mới
+        await this.batchUploadNewImages(data.regionFolder, this.imgUploadTrigger);
+
         // BƯỚC 2: Dùng chính tên file PDF làm tên hình (vì cùng tên, khác đuôi)
         console.log(`Sẽ upload hình với tên (lấy từ PDF): ${data.fileName}`);
         await this.uploadImage(data.fileName, data.regionFolder);
@@ -262,12 +262,39 @@ export class EbrochuresPage {
 
         // Đợi list load
         const fileItem = this.page.locator('.card-file').first();
-        await fileItem.waitFor({state: 'visible', timeout: 30000});
+        await fileItem.waitFor({ state: 'visible', timeout: 30000 });
 
-        // Tìm và click vào file
-        const fileInLibrary = this.page.locator(`.card-file[title="${fullFileName}"]`).first();
-        // await expect(fileInLibrary).toBeVisible();
-        await fileInLibrary.click();
+        const nextBtn = this.page.locator('#uploader_next_btn');
+
+        let found = false;
+        const maxPages = 3; // tránh loop vô hạn
+
+        for (let i = 1; i <= maxPages; i++) {
+            console.log(`Đang tìm ở page ${i}`);
+            await fileItem.waitFor({ state: 'visible', timeout: 30000 })
+            const fileInLibrary = this.page.locator(`.card-file[title="${fullFileName}"]`);
+
+            if (await fileInLibrary.count() > 0) {
+                await fileInLibrary.first().click();
+                found = true;
+                break;
+            }
+
+            // Nếu không có nút next hoặc bị disable → dừng
+            if (!(await nextBtn.isVisible())) {
+                break;
+            }
+
+            // Click sang trang tiếp
+            await nextBtn.click();
+
+            // Đợi load page mới (tùy UI có thể thay bằng wait API)
+            await this.page.waitForTimeout(1500);
+        }
+
+        if (!found) {
+            throw new Error(`Không tìm thấy hình: ${fullFileName}`);
+        }
 
         // Xác nhận chọn
         await this.addSelectedFilesBtn.click();
@@ -275,9 +302,9 @@ export class EbrochuresPage {
         // Đóng modal
         await expect(this.modalUploadTab).not.toBeVisible();
 
-        // Kiểm tra xem hình đã render ngoài form
+        // Kiểm tra render ngoài form
         const uploadedPreview = this.page.locator(`.file-preview-item[title="${fullFileName}"]`);
-        await expect(uploadedPreview).toBeVisible({timeout: 10000});
+        await expect(uploadedPreview).toBeVisible({ timeout: 30000 });
 
         console.log(`Đã chọn và xác nhận ${fullFileName}.`);
     }
@@ -340,8 +367,8 @@ export class EbrochuresPage {
 
         // Kiểm tra nếu số trang hiện tại lớn hơn tổng số hình, nghĩa là đã hoàn thành
         if (slideNumber > totalImages) {
-            console.log(`Đã hoàn thành: Số trang ${slideNumber} > Tổng số hình ${totalImages}`);
-            return;
+            console.log(`Đã hoàn thành: ${slideNumber - 1} trang = Tổng số hình trong folder: ${totalImages}`);
+            return false;
         }
 
         const actualImageIndex = slideNumber - 1;
@@ -350,23 +377,24 @@ export class EbrochuresPage {
         const nameWithoutExt = path.parse(fileName).name;
         const fullFileName = `${nameWithoutExt}.jpg`;
 
-        console.log(`Đang chọn hình ${fullFileName} cho Image FE`);
-        await this.selectSingleImage(fullFileName, this.imgUploadTriggerFE);
-
         console.log(`Đang chọn hình ${fullFileName} cho Image AI`);
         await this.selectSingleImage(fullFileName, this.imgUploadTriggerAI);
 
         // Sau khi chọn xong, bấm nút Tạo điểm
         await this.createPointBtn.click();
 
-        // Tiếp theo bấm nút Tự động cắt
-        await this.autoCropBtn.click();
+        // await this.page.waitForTimeout(3000);
+        // // Tiếp theo bấm nút Tự động cắt
+        // await this.autoCropBtn.click();
+        //
+        // // Chờ response từ API auto-crop
+        // await this.waitForAutoCropResponse();
 
-        // Chờ response từ API auto-crop
-        await this.waitForAutoCropResponse();
-
+        console.log(`Đang chọn hình ${fullFileName} cho Image FE`);
+        await this.selectSingleImage(fullFileName, this.imgUploadTriggerFE);
         // Cuối cùng bấm nút Lưu trang
         await this.saveSlideBtn.click();
+        return true;
     }
 
     //Upload nhiều hình
@@ -458,8 +486,14 @@ export class EbrochuresPage {
     // Hàm chờ response từ API auto-crop
     private async waitForAutoCropResponse() {
         const response = await this.page.waitForResponse(resp => resp.url().includes('/auto-crop'));
+        const body = await response.text();
+        const status = response.status();
         if (response.status() >= 400) {
-            console.error(`Auto-crop API error: ${response.status()} ${response.statusText()}`);
+            console.error(`Auto-crop API error: ${status} - ${body}`);
+        }else if (response.status() === 200) {
+            console.log(`Auto-crop API success: ${status}`);
+        } else {
+            console.warn(`Auto-crop API returned status: ${status}`);
         }
     }
 }
