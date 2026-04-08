@@ -8,38 +8,39 @@ export const CONFIG = {
 
 export const CAMPAIGN_DEFINITIONS = [
     {
-        key: "MAIL",
         vn: "TUNG DEAL SIÊU TIẾT KIỆM",
         en: "MEGA SAVINGS DEALS",
         folder: "mail",
-        enabled: true,
+        enabled: false,
     },
     {
-        key: "GIA_SI",
         vn: "GIÁ SỈ",
         en: "WHOLESALES",
         folder: "giasi",
         enabled: true,
     },
     {
-        key: "MNLN",
         vn: "MUA NHIỀU LỢI NHIỀU",
         en: "BUY MORE SAVE MORE",
         folder: "mnln",
-        enabled: true,
+        enabled: false,
     },
     {
-        key: "THR",
         vn: "THƯƠNG HIỆU RIÊNG",
         en: "PRIVATE LABEL",
         folder: "thr",
-        enabled: true,
+        enabled: false,
     },
     {
-        key: "MNLN",
-        vn: "DEAL TỐT CHỐT LÀ LỜI",
-        en: "GOOD DEALS EQUAL BIG GAINS",
+        vn: "HƠN CẢ GIÁ RẺ",
+        en: "BETTER THAN CHEAP",
         folder: "mnln",
-        enabled: false, //tắt ở đây
+        enabled: true, //tắt ở đây
+    },
+    {
+        vn: "HÀNG THÁI",
+        en: "THAI PRODUCTS",
+        folder: "thr",
+        enabled: true,
     },
 ] as const;

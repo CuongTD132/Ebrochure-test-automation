@@ -7,9 +7,9 @@ import * as path from 'path';
 // Danh sách cố định chứa thông tin chi tiết các Khu vực hỗ trợ (Regions)
 // Bao gồm tên, chuỗi giá trị dropdown, và tên thư mục nơi lưu trữ file đi kèm của vùng đó
 const REGIONS = [
-    { vn: "MIỀN BẮC", en: "CLUSTER BAC", dropdown: "Cluster_Bắc", folder: "bac" },
-    { vn: "MIỀN NAM", en: "CLUSTER NAM", dropdown: "Cluster_Nam", folder: "nam" },
-    { vn: "MIỀN TRUNG", en: "CLUSTER 3", dropdown: "Cluster 3", folder: "trung" },
+    // { vn: "MIỀN BẮC", en: "CLUSTER BAC", dropdown: "Cluster_Bắc", folder: "bac" },
+    // { vn: "MIỀN NAM", en: "CLUSTER NAM", dropdown: "Cluster_Nam", folder: "nam" },
+    // { vn: "MIỀN TRUNG", en: "CLUSTER 3", dropdown: "Cluster 3", folder: "trung" },
     { vn: "SupercenterĐN", en: "SupercenterĐN", dropdown: "DNSC", folder: "dnsc" },
 ];
 const BASE_CAMPAIGN = CONFIG.campaign;

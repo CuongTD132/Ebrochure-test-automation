@@ -252,7 +252,7 @@ export class EbrochuresPage {
     }
 
     // Hàm chọn một hình cụ thể từ thư viện
-    private async selectSingleImage(fullFileName: string, trigger: Locator) {
+    private async selectSingleImage(fullFileName: string, trigger: Locator, container: Locator) {
         console.log(`Đang chọn: ${fullFileName}`);
 
         // Mở modal
@@ -302,8 +302,11 @@ export class EbrochuresPage {
         // Đóng modal
         await expect(this.modalUploadTab).not.toBeVisible();
 
-        // Kiểm tra render ngoài form
-        const uploadedPreview = this.page.locator(`.file-preview-item[title="${fullFileName}"]`);
+        // Kiểm tra render đúng trong container
+        const uploadedPreview = container.locator(
+            `.file-preview-item[title="${fullFileName}"]`
+        );
+
         await expect(uploadedPreview).toBeVisible({ timeout: 30000 });
 
         console.log(`Đã chọn và xác nhận ${fullFileName}.`);
@@ -372,26 +375,34 @@ export class EbrochuresPage {
         }
 
         const actualImageIndex = slideNumber - 1;
-
+        if (actualImageIndex >= totalImages) {
+            console.log(` ĐÃ HOÀN THÀNH TOÀN BỘ ${totalImages} HÌNH`);
+            return false;
+        }
         const fileName = sortedImages[actualImageIndex];
         const nameWithoutExt = path.parse(fileName).name;
         const fullFileName = `${nameWithoutExt}.jpg`;
 
         console.log(`Đang chọn hình ${fullFileName} cho Image AI`);
-        await this.selectSingleImage(fullFileName, this.imgUploadTriggerAI);
+        const aiContainer = this.page.locator('.form-group:has(#imageId)');
+        await this.selectSingleImage(fullFileName, this.imgUploadTriggerAI,aiContainer);
 
         // Sau khi chọn xong, bấm nút Tạo điểm
         await this.createPointBtn.click();
 
-        // await this.page.waitForTimeout(3000);
-        // // Tiếp theo bấm nút Tự động cắt
-        // await this.autoCropBtn.click();
-        //
-        // // Chờ response từ API auto-crop
-        // await this.waitForAutoCropResponse();
+        // Tiếp theo bấm nút Tự động cắt
+        await this.autoCropBtn.click();
+
+        // Chờ response từ API auto-crop
+        await this.waitForAutoCropResponse();
 
         console.log(`Đang chọn hình ${fullFileName} cho Image FE`);
-        await this.selectSingleImage(fullFileName, this.imgUploadTriggerFE);
+        const feContainer = this.page.locator('.form-group:has(#imageFeId)');
+        await this.selectSingleImage(
+            fullFileName,
+            this.imgUploadTriggerFE,
+            feContainer
+        );
         // Cuối cùng bấm nút Lưu trang
         await this.saveSlideBtn.click();
         return true;
@@ -492,6 +503,7 @@ export class EbrochuresPage {
             console.error(`Auto-crop API error: ${status} - ${body}`);
         }else if (response.status() === 200) {
             console.log(`Auto-crop API success: ${status}`);
+            await this.page.waitForTimeout(3000);
         } else {
             console.warn(`Auto-crop API returned status: ${status}`);
         }
