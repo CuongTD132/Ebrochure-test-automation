@@ -390,11 +390,11 @@ export class EbrochuresPage {
         // Sau khi chọn xong, bấm nút Tạo điểm
         await this.createPointBtn.click();
 
-        // Tiếp theo bấm nút Tự động cắt
-        await this.autoCropBtn.click();
-
-        // Chờ response từ API auto-crop
-        await this.waitForAutoCropResponse();
+        // // Tiếp theo bấm nút Tự động cắt
+        // await this.autoCropBtn.click();
+        //
+        // // Chờ response từ API auto-crop
+        // await this.waitForAutoCropResponse();
 
         console.log(`Đang chọn hình ${fullFileName} cho Image FE`);
         const feContainer = this.page.locator('.form-group:has(#imageFeId)');
@@ -403,9 +403,34 @@ export class EbrochuresPage {
             this.imgUploadTriggerFE,
             feContainer
         );
-        // Cuối cùng bấm nút Lưu trang
+        // Save lần 1
+        await this.saveSlideBtn.click();
+        await this.page.waitForLoadState('networkidle');
+
+// 🔥 Mở lại slide vừa tạo
+        await this.openLastSlideForEdit();
+
+// Auto crop
+        await this.autoCropBtn.click();
+        await this.waitForAutoCropResponse();
+
+// Save lần 2
         await this.saveSlideBtn.click();
         return true;
+    }
+
+    async openLastSlideForEdit() {
+        const lastRow = this.page.locator('#sortable-list tr').last();
+
+        // Đợi row xuất hiện
+        await lastRow.waitFor({ state: 'visible', timeout: 10000 });
+
+        // Click nút edit trong row đó
+        const editBtn = lastRow.locator('a[title="Chỉnh sửa"]');
+        await editBtn.click();
+
+        // Đợi vào trang edit
+        await this.page.waitForURL(/\/edit$/);
     }
 
     //Upload nhiều hình
